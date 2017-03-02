@@ -1,56 +1,54 @@
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.List;
 
 public class Main {
 
-    public static void validation(DecisionTree dt, int foldNum) {
-        int trainNum = (dt.trainData.entries.size() / foldNum) * (foldNum - 1);
-        int testNum = dt.trainData.entries.size() - trainNum;
-
-        ArrayList<Double> accuracy = new ArrayList<>();
-
-        for (int i = 0; i < foldNum; i ++) {
-            DecisionTree fold = new DecisionTree();
-
-            ArrayList<Integer> testIndex = new ArrayList<>();
-
-            for (int p = 0; p < testNum; p ++) {
-                Integer index = (int) (Math.random() * (dt.trainData.entries.size()));
-
-                while (testIndex.contains(index)) {
-                    index = (int) (Math.random() * (dt.trainData.entries.size()));
-                }
-                testIndex.add(index);
-
-                fold.testData.entries.add(dt.trainData.entries.get(index));
-            }
-            for (int q = 0; q < dt.trainData.entries.size(); q ++) {
-                if (testIndex.contains(new Integer(q))) {
-                    continue;
-                }
-                fold.trainData.entries.add(dt.trainData.entries.get(q));
-            }
-            System.out.println("\nFold " + i + ": ");
-            fold.startTrain();
-            accuracy.add(fold.startTest());
-        }
-
-        double sum = 0;
-        for (int i = 0; i < accuracy.size(); i ++) {
-            sum += accuracy.get(i);
-        }
-        System.out.println("\nMean accuracy is: " + sum / accuracy.size());
-    }
-
     public static void main(String[] args) throws IOException {
-        DecisionTree dt = new DecisionTree();
-        dt.loadData(true, "train.csv");
+	// write your code here
+        ArrayList<Boolean> typeSpecification = new ArrayList<>(Arrays.asList(true, true, true, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false));
+
+        DecisionTree dt = new DecisionTree(typeSpecification, ";", false);
+
+        List<String[]> entries = dt.readCSV("/Users/d_d/Desktop/BigDataSystemsinPractice/Assignments/HW5/smallerData.csv", true);
+
+        int trainSize = (int) (entries.size() * 0.8);
+
+        ArrayList<String[]> trainEntries = new ArrayList<>();
+
+        ArrayList<String[]> testEntries = new ArrayList<>();
+
+        List<Integer> testIndex = new ArrayList<>();
+
+        for (int j = 0; j < entries.size() - trainSize; j ++) {
+            Integer index = (int) (Math.random() * (entries.size()));
+            while (testIndex.contains(index)) {
+                index = (int) (Math.random() * (entries.size()));
+            }
+            testIndex.add(index);
+            testEntries.add(entries.get(index));
+        }
+        for (int i = 0; i < entries.size(); i ++) {
+            if (testIndex.contains(new Integer(i))) {
+                continue;
+            }
+            trainEntries.add(entries.get(i));
+        }
+
+        entries = null;
+
+        dt.loadData(true, trainEntries);
+
+        dt.loadData(false, testEntries);
+
         dt.startTrain();
+
         dt.preorderTraversePrint(dt.start, dt.root, -1, false, true);
-        dt.loadData(false, "test.csv");
+
         dt.startTest();
+
         dt.confusionMatrixPrint();
-        System.out.println("\n\nStart 10 folds validation:");
-        validation(dt, 10);
+
     }
 }

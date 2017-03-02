@@ -14,35 +14,53 @@ import java.util.*;
  * ||     attr1,attr2,attr3,...,attrn,label      ||
  * ||============================================||
  * For continuous output, Please refer to regression tree, decision tree is more like a classifier.
- * TODO: Extend this class to BIN-DISCRETE(more than 2), BIN-BIN.
+ *
+ * ===================================================
+ * Updated by d_d on 3/1/17.
+ *
+ * This class of Decision Tree can deal with [continuous, categorical or a mixture of both]
+ * attributes value and discrete output labels.
+ * This class can only support CSV fomatted data file. Training and Test dataset format should be:
+ * ||============================================||
+ * ||     attr1,attr2,attr3,...,attrn,label      ||
+ * ||============================================||
+ * The delimiter can be specified when create new instance of this class.
+ * The attributes type needs to be specified beforehand, true if the type is categorical, false otherwise.
+ * For continuous output, Please refer to regression tree, decision tree is more like a classifier.
+ * TODO: Extend this class for Random Forest use.
  */
 public class DecisionTree {
-
     /**
      * Decision Tree Constructor.
      * Initialise training dataset and testing dataset.
      */
-    public DecisionTree() {
+    public DecisionTree(ArrayList<Boolean> typeSpecification, String delimiter, boolean inRandomForest) {
         this.trainData = new Entries();
         this.testData = new Entries();
+        this.typeSpecification = typeSpecification;
+        this.delimiter = delimiter;
+
+        this.inRandomForest = inRandomForest;
+        this.attributesName = null;
     }
 
+    // Store attributes' name if the data has a header.
+    public ArrayList<String> attributesName;
 
-    /**
-     * Utility of LOG function, support any base.
-     * @param x Log parameter.
-     * @param base Base, should be integer.
-     * @return The log result.
-     */
-    private static double log(double x, int base) {
-        return (Math.log(x) / Math.log(base));
-    }
+    // TODO: inRandomForest indicator.
+    private boolean inRandomForest;
+
+    // Data CSV file delimiter.
+    private String delimiter;
+
+    // Attributes' type(categorical/continuous) specification.
+    private ArrayList<Boolean> typeSpecification;
 
     // Training Data.
-    public Entries trainData;
+    private Entries trainData;
 
     // Testing Data.
-    public Entries testData;
+    private Entries testData;
 
     // Decision Tree's root node.
     public Node root;
@@ -51,216 +69,7 @@ public class DecisionTree {
     public Node start;
 
     // The confusion matrix.
-    public Map<Pair<String, String>, Integer> confusionMatrix;
-
-    /**
-     * This class is for Node of decision tree.
-     * It stores information about current entropy, current examples labels' kinds and numbers.
-     * it also stores next best attribute to split, and the splitting boundary.
-     */
-    public class Node {
-        // Entropy calculated on labelsCount which is formed by splitting boundary.
-        public double entropy;
-
-        // Using the splitting boundary form a labelsCount.
-        // It's a hash map, the key is label, the value is the number of it.
-        public Map<String, Integer> labelsCount;
-
-        // Leaf node's label, which is used to produce prediction. NULL if non-leaf nodes.
-        public String label;
-
-        // To tag if current node needs more splitting.
-        public boolean isConsistent;
-
-        // The best attribute that needs to be split.
-        public int bestAttribute;
-
-        // The decision boundary for the best attribute. Also using this to binarize the data.
-        public double decisionBoundary;
-
-        // Left child.
-        public Node left;
-
-        // Right child.
-        public Node right;
-
-        /**
-         * A utility that facilitates the counting process in a hash map for certain key.
-         * Same as in python Collections.Counter().
-         * @param hashMap The hash map that needs to be updated.
-         * @param key The key that needs to be updated.
-         * @return The updated hash map.
-         */
-        public Map<String, Integer> Counter(Map<String, Integer> hashMap, String key) {
-            Map<String, Integer> temp = new HashMap<>(hashMap);
-            if (temp.containsKey(key)) {
-                int count = temp.get(key);
-                temp.put(key, ++ count);
-            } else {
-                temp.put(key, 1);
-            }
-            return temp;
-        }
-
-        /**
-         * For current examples, generate the label count, for later calculating entropy and consistency check.
-         * @param examples The examples that current node received.
-         */
-        private void processLabels(Entries examples) {
-            List<String> labels = new ArrayList<>();
-            this.labelsCount = new HashMap<>();
-            for (Entry e: examples.entries) {
-                this.labelsCount = Counter(this.labelsCount, e.label);
-                labels.add(e.label);
-            }
-            if (this.labelsCount.size() == 1) {
-
-                // If only one label exists in current example then set the prediction label to it.
-                this.label = labels.get(0);
-
-                // No need to split more, current node is consistent with examples.
-                this.isConsistent = true;
-
-            } else {
-                // Received more than 1 labels, meaning not consistent, set the tag to false.
-                this.isConsistent = false;
-            }
-        }
-
-        /**
-         * Calculate entropy for a labelsCount.
-         * @param n The total number of labels.
-         * @param labelsCount The hash map of labels, the key is label, the value is the number of it.
-         * @return The labelsCount's entropy.
-         */
-        private double calculateEntropy(Integer n, Map<String, Integer> labelsCount) {
-            double entropy = 0;
-            Iterator it = labelsCount.entrySet().iterator();
-            while (it.hasNext()) {
-                Map.Entry pair = (Map.Entry)it.next();
-                Double count = ((Integer) pair.getValue()) * 1.0; // * 1.0 is to convert it to double type.
-                double p = count / n;
-                entropy -= (p * log(p, 2));
-            }
-            return entropy;
-        }
-
-        /**
-         * The main function to find the next best splitting attribute.
-         * I put it into Node because every node would receive a set of examples when it's created and wouldn't be
-         * changed later.
-         * @param examples The examples that current node received after its parent's splitting.
-         * @param attributes The remaining attributes that haven't been spitted before.
-         */
-        private void findBestSplitAttr(Entries examples, ArrayList<Integer> attributes) {
-
-            // minEntropy over all attributes and all candidate boundaries.
-            double minEntropy = Double.MAX_VALUE;
-
-            // Traverse all remaining attributes.
-            for (Integer attrIdx: attributes) {
-
-                // Sort examples according to current attributes.
-                Collections.sort(examples.entries, new Comparator<Entry>() {
-                    @Override
-                    public int compare(Entry o1, Entry o2) {
-                        return Double.compare(o1.attributes.get(attrIdx),
-                                o2.attributes.get(attrIdx));
-                    }
-                });
-
-                // Trying all candidate boundaries.
-                for (int i = 1; i < examples.entries.size(); i ++) {
-
-                    // Discretise examples into binary.
-                    Map<String, Integer> pos = new HashMap<>();
-                    Map<String, Integer> neg = new HashMap<>();
-
-                    for (int j = 0; j < examples.entries.size(); j ++) {
-                        String newLabel = examples.entries.get(j).label;
-                        if (j < i) {
-                            pos = Counter(pos, newLabel);
-                        } else {
-                            neg = Counter(neg, newLabel);
-                        }
-                    }
-
-                    // Calculate pos and neg entropy.
-                    double posEntropy = calculateEntropy(i, pos);
-                    double negEntropy = calculateEntropy(examples.entries.size() - i, neg);
-
-                    // Updating the minEntropy.
-                    if ((posEntropy + negEntropy) < minEntropy) {
-                        minEntropy = posEntropy + negEntropy;
-                        if (attrIdx == 3) {
-                            this.decisionBoundary = (examples.entries.get(i - 1).attributes.get(attrIdx) + examples.entries.get(i).attributes.get(attrIdx)) / 2 + 0.1;
-                        } else {
-                            this.decisionBoundary = (examples.entries.get(i - 1).attributes.get(attrIdx) + examples.entries.get(i).attributes.get(attrIdx)) / 2;
-                        }
-                        this.bestAttribute = attrIdx;
-                    }
-                }
-            }
-        }
-
-        /**
-         * Constructor for Node when it needs to receive examples and remaining attributes.
-         * @param examples The remaining examples after its parent's splitting.
-         * @param attributes The remaining attributes after its parent's splitting.
-         */
-        public Node(Entries examples, ArrayList<Integer> attributes) {
-            this.left = null;
-            this.right = null;
-            this.label = null;
-
-            processLabels(examples);
-
-            this.entropy = calculateEntropy(examples.entries.size(), this.labelsCount);
-
-            findBestSplitAttr(examples, attributes);
-        }
-
-        /**
-         * Constructor of Node when there's no examples left.
-         */
-        public Node() {
-            this.left = null;
-            this.right = null;
-            this.label = null;
-            this.entropy = 0;
-            this.labelsCount = new HashMap<>();
-            this.isConsistent = true;
-            this.bestAttribute = 0;
-            this.label = "";
-        }
-    }
-
-    /**
-     * This class is specifically for dataset, each entry is a row in dataset, seperated as attributes and
-     * correspongding label(also called target attribute in some ID3 algorithm tutorials).
-     */
-    public class Entries {
-        public List<Entry> entries;
-
-        public Entries() {
-            this.entries = new ArrayList<>();
-        }
-    }
-
-    /**
-     * This class is specifically for row in dataset, attributes is a list of Double value, because of
-     * continuous/numerical attributes.
-     * label is a String indicating the label.
-     */
-    public class Entry {
-        public List<Double> attributes;
-        public String label;
-
-        public Entry() {
-            this.attributes = new ArrayList<>();
-            this.label = null;
-        }
-    }
+    private Map<Pair<String, String>, Integer> confusionMatrix;
 
     /**
      * A utility function to read a CSV as a List of String Arrays, each element is a row.
@@ -268,14 +77,21 @@ public class DecisionTree {
      * @return The rows raw data.
      * @throws IOException In case of IOException.
      */
-    private List<String[]> readCSV(String filePath) throws IOException {
+    public List<String[]> readCSV(String filePath, boolean header) throws IOException {
         BufferedReader fileReader = new BufferedReader(new FileReader(filePath));
         String line;
         List<String[]> entries = new ArrayList<>();
+
+        // Process header;
+        if (header) {
+            this.attributesName = new ArrayList<>();
+            line = fileReader.readLine();
+
+            this.attributesName.addAll(Arrays.asList(line.split(this.delimiter)));
+        }
         while ((line = fileReader.readLine()) != null) {
 
-            // Change here for other delimiters.
-            String[] tokens = line.split(",");
+            String[] tokens = line.split(this.delimiter);
 
             if (tokens.length > 0) {
                 entries.add(tokens);
@@ -285,21 +101,17 @@ public class DecisionTree {
     }
 
     /**
-     * A public method for user to load data for DecisionTree class.
-     * NOTICE: Training data and test data need to be loaded seperately, label is as default the last column
-     *         in the dataset.
-     * @param training  Indicate if the file is training data.
-     * @param filePath  Indicate the filepath.
-     * @throws IOException In case of IOException.
+     * A utility function for loadData function, to add data to DecisionTree properties.
+     * @param training Indicate if the data is training data.
+     * @param entries The entries needs to be filled in.
      */
-    public void loadData(boolean training, String filePath) throws IOException {
-        List<String[]> entries = readCSV(filePath);
+    private void loadDataUtil(boolean training, List<String[]> entries) {
         for (String[] s: entries) {
             int i;
 
             Entry newEntry = new Entry();
             for (i = 0; i < s.length - 1; i ++) {
-                newEntry.attributes.add(Double.parseDouble(s[i]));
+                newEntry.attributes.add(new CellData(s[i], this.typeSpecification.get(i)));
             }
 
             // The last colunm is as default the label.
@@ -314,14 +126,37 @@ public class DecisionTree {
     }
 
     /**
+     * A public method for user to load data for DecisionTree class.
+     * NOTICE: Training data and test data need to be loaded seperately, label is as default the last column
+     *         in the dataset.
+     * @param training  Indicate if the file is training data.
+     * @param filePath  Indicate the filepath.
+     * @throws IOException In case of IOException.
+     */
+    public void loadData(boolean training, String filePath, boolean header) throws IOException {
+        List<String[]> entries = readCSV(filePath, header);
+        loadDataUtil(training, entries);
+    }
+
+    /**
+     * An alternate public method for user to load entries data instead of from file.
+     * @param training Indicate if the file is training data.
+     * @param entries The entries needs to be filled in.
+     * @throws IOException In case of IOException.
+     */
+    public void loadData(boolean training, ArrayList<String[]> entries) throws IOException {
+        loadDataUtil(training, entries);
+    }
+
+    /**
      * The main ID3 recursive function. The pseudocode can be found at:
      * https://www.cs.swarthmore.edu/~meeden/cs63/f05/id3.html
      * @param examples  The examples for next splitting.
      * @param attributes    The attributes for next splitting. (Remaining Attributes.)
      * @return  The root node of the DecisionTree.
      */
-    public Node ID3(Entries examples, ArrayList<Integer> attributes){
-        Node node = new Node(examples, attributes);
+    private Node ID3(Entries examples, ArrayList<Integer> attributes){
+        Node node = new Node(examples, attributes, this.typeSpecification);
 
         // If current node is already consistent with examples, return.
         if (node.isConsistent) {
@@ -337,25 +172,38 @@ public class DecisionTree {
                 return node;
 
             }
-            // Sort examples according to best splitting attribute, for splitting dataset later.
-            Collections.sort(examples.entries, new Comparator<Entry>() {
-                @Override
-                public int compare(Entry o1, Entry o2) {
-                    return Double.compare(o1.attributes.get(node.bestAttribute),
-                            o2.attributes.get(node.bestAttribute));
-                }
-            });
 
-            // Split dataset according to decision boundary of the best splitting attribute.
             Entries newExamplesLeft = new Entries();
             Entries newExampleRight = new Entries();
 
-            for (int i = 0; i < examples.entries.size(); i ++) {
-                Entry entryTemp = examples.entries.get(i);
-                if (entryTemp.attributes.get(node.bestAttribute) <= node.decisionBoundary) {
-                    newExamplesLeft.entries.add(entryTemp);
-                } else {
-                    newExampleRight.entries.add(entryTemp);
+            if (!this.typeSpecification.get(node.bestAttribute)) {
+                // Sort examples according to best splitting attribute, for splitting dataset later.
+                Collections.sort(examples.entries, new Comparator<Entry>() {
+                    @Override
+                    public int compare(Entry o1, Entry o2) {
+                        return new CellData().compare(o1.attributes.get(node.bestAttribute),
+                                o2.attributes.get(node.bestAttribute));
+                    }
+                });
+
+                // Split dataset according to decision of the best splitting attribute.
+                for (int i = 0; i < examples.entries.size(); i++) {
+                    Entry entryTemp = examples.entries.get(i);
+                    if ((Double) entryTemp.attributes.get(node.bestAttribute).value <= ((Double) node.decision.value)) {
+                        newExamplesLeft.entries.add(entryTemp);
+                    } else {
+                        newExampleRight.entries.add(entryTemp);
+                    }
+                }
+            } else {
+                // Split dataset according to decision of the best splitting attribute.
+                for (int i = 0; i < examples.entries.size(); i++) {
+                    Entry entryTemp = examples.entries.get(i);
+                    if ((entryTemp.attributes.get(node.bestAttribute).value).equals(node.decision.value)) {
+                        newExamplesLeft.entries.add(entryTemp);
+                    } else {
+                        newExampleRight.entries.add(entryTemp);
+                    }
                 }
             }
 
@@ -396,11 +244,28 @@ public class DecisionTree {
         for (int i = 0; i < depth; i ++){
             System.out.print("\t");
         }
+
+        // Decision relation indicator.
+        String relation;
+
         if (!start){
-            if (!right) {
-                System.out.print("|Attr" + parent.bestAttribute + " < " + parent.decisionBoundary + " : " + node.label + " ");
-            } else {
-                System.out.print("|Attr" + parent.bestAttribute + " >= " + parent.decisionBoundary + " : " + node.label + " ");
+            if (!this.typeSpecification.get(parent.bestAttribute)) { // Continuous attribute.
+                if (!right) {
+                    relation = " <= ";
+                } else {
+                    relation = " > ";
+                }
+            } else { // Categorical attribute.
+                if (!right) {
+                    relation = " == ";
+                } else {
+                    relation = " != ";
+                }
+            }
+            if (this.attributesName == null) {
+                System.out.print("|Attr" + parent.bestAttribute + relation + parent.decision.value + " : " + node.label + " ");
+            } else { // If the data CSV has a header.
+                System.out.print("|" + this.attributesName.get(parent.bestAttribute) + relation + parent.decision.value + " : " + node.label + " ");
             }
         }
         Iterator it = node.labelsCount.entrySet().iterator();
@@ -421,26 +286,46 @@ public class DecisionTree {
      * @param node  The decision tree's root node.
      * @return  The current test entry's predicted label.
      */
-    public String getPrediction(Entry entry, Node node) {
+    private String getPrediction(Entry entry, Node node) {
         if (node.left == null && node.right == null)
             return node.label;
-        if (entry.attributes.get(node.bestAttribute) <= node.decisionBoundary) {
-            return getPrediction(entry, node.left);
+        if (!this.typeSpecification.get(node.bestAttribute)) {
+            if (((Double) entry.attributes.get(node.bestAttribute).value) <= ((Double) node.decision.value)) {
+                return getPrediction(entry, node.left);
+            } else {
+                return getPrediction(entry, node.right);
+            }
         } else {
-            return getPrediction(entry, node.right);
+            if ((entry.attributes.get(node.bestAttribute).value).equals(node.decision.value)) {
+                return getPrediction(entry, node.left);
+            } else {
+                return getPrediction(entry, node.right);
+            }
         }
     }
 
+    /**
+     * A utility function to print n whitespaces.
+     * @param n The number of whitespaces to print.
+     */
     private void printWhitespaces(int n) {
         for (int i = 0; i < n; i ++){
             System.out.print(" ");
         }
     }
 
+    /**
+     * A utility function to print Confusion Matrix delimiter.
+     */
     private void printDelimeter() {
         System.out.print("|");
     }
 
+    /**
+     * A utility function to print line seperator.
+     * @param n The number of columns.
+     * @param size The width of per column.
+     */
     private void printLine(int n, int size) {
         printDelimeter();
         for (int i = 0; i < n * (size + 1) + size; i ++) {
@@ -450,6 +335,11 @@ public class DecisionTree {
         System.out.println();
     }
 
+    /**
+     * A utility function to print Matrix head.
+     * @param n The number of columns.
+     * @param size The width of per column.
+     */
     private void printMatrixHead(int n, int size) {
         int width = n * (size + 1) + size;
         String head = "Confusion Matrix";
@@ -478,9 +368,9 @@ public class DecisionTree {
         printDelimeter();
         printWhitespaces(longest);
         printDelimeter();
-        for (int i = 0; i < labels.size(); i ++) {
-            printWhitespaces(longest - labels.get(i).length());
-            System.out.print(labels.get(i));
+        for (String label: labels) {
+            printWhitespaces(longest - label.length());
+            System.out.print(label);
             printDelimeter();
         }
         System.out.print("\n");
@@ -491,9 +381,8 @@ public class DecisionTree {
             printWhitespaces(longest - al.length());
             System.out.print(al);
             printDelimeter();
-            for (int j = 0; j < labels.size(); j ++) {
-                String pl = labels.get(j);
-                Integer count = this.confusionMatrix.get(new Pair<>(al, pl));
+            for (String label: labels) {
+                Integer count = this.confusionMatrix.get(new Pair<>(al, label));
                 String num = count == null ? "0" : String.valueOf(count);
                 printWhitespaces(longest - num.length());
                 System.out.print(num);
@@ -548,8 +437,8 @@ public class DecisionTree {
                 correct ++;
             } else {
                 System.out.print("Miss classifying [ ");
-                for (Double d: e.attributes) {
-                    System.out.print(d + ", ");
+                for (CellData d: e.attributes) {
+                    System.out.print(d.value + ", ");
                 }
                 System.out.print(e.label + "]\tas [" + predictedLabel + "]\n");
             }
