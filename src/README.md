@@ -19,8 +19,9 @@ For numerical features, treating every numerical value of that attribute as a de
 
 This version also allows user specified feature choosing(ignoring), a user can decide what feature is redundant and not considering them when splitting.
 
-[![Screen Shot 2017-03-02 at 20.41.35.png](https://svbtleusercontent.com/sfziyqlqaszf2a.png)]
-[![Screen Shot 2017-03-02 at 20.41.32.png](https://svbtleusercontent.com/phldkfvsbzstoq.png)]
+![Screen Shot 2017-03-02 at 20.41.32.png](https://svbtleusercontent.com/phldkfvsbzstoq.png)
+
+![Screen Shot 2017-03-02 at 20.41.35.png](https://svbtleusercontent.com/sfziyqlqaszf2a.png)
 
 
 The decision tree in this class will be fully grown. Feel free to modify to prune.
