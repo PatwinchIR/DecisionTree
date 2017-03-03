@@ -8,8 +8,9 @@ public class Main {
     public static void main(String[] args) throws IOException {
 	// write your code here
         ArrayList<Boolean> typeSpecification = new ArrayList<>(Arrays.asList(true, true, true, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false));
+        ArrayList<Boolean> chosenAttributes = new ArrayList<>(Arrays.asList(false, true, false, true, true, true, true, true, true, true, true,true, true, true, true, true, true, true));
 
-        DecisionTree dt = new DecisionTree(typeSpecification, ";", false);
+        DecisionTree dt = new DecisionTree(typeSpecification, chosenAttributes, ";", false);
 
         List<String[]> entries = dt.readCSV("smallerData.csv", true);
 
@@ -42,11 +43,11 @@ public class Main {
 
         dt.loadData(false, testEntries);
 
-        dt.startTrain();
+        dt.startTraining();
 
         dt.preorderTraversePrint(dt.start, dt.root, -1, false, true);
 
-        dt.startTest();
+        dt.startTesting();
 
         dt.confusionMatrixPrint();
 

@@ -27,27 +27,40 @@ import java.util.*;
  * The delimiter can be specified when create new instance of this class.
  * The attributes type needs to be specified beforehand, true if the type is categorical, false otherwise.
  * For continuous output, Please refer to regression tree, decision tree is more like a classifier.
- * TODO: Extend this class for Random Forest use.
+ *
+ * ===================================================
+ * Updated by d_d on 3/3/17.
+ *
+ * This class now support random forest.
+ *
  */
 public class DecisionTree {
     /**
      * Decision Tree Constructor.
      * Initialise training dataset and testing dataset.
+     * @param typeSpecification Attributes' type(categorical/continuous) specification.
+     * @param chosenAttributes A boolean array indicates the attributes that user choose to use/ignore.
+     * @param delimiter Data CSV file delimiter.
+     * @param inRandomForest For RandomForest use indicator.
      */
-    public DecisionTree(ArrayList<Boolean> typeSpecification, String delimiter, boolean inRandomForest) {
+    public DecisionTree(ArrayList<Boolean> typeSpecification, ArrayList<Boolean> chosenAttributes, String delimiter, boolean inRandomForest) {
         this.trainData = new Entries();
         this.testData = new Entries();
         this.typeSpecification = typeSpecification;
+        this.chosenAttributes = chosenAttributes;
         this.delimiter = delimiter;
 
         this.inRandomForest = inRandomForest;
         this.attributesName = null;
     }
 
+    // A boolean array indicates the attributes that user choose to use/ignore.
+    private ArrayList<Boolean> chosenAttributes;
+
     // Store attributes' name if the data has a header.
     public ArrayList<String> attributesName;
 
-    // TODO: inRandomForest indicator.
+    // For RandomForest use indicator.
     private boolean inRandomForest;
 
     // Data CSV file delimiter.
@@ -57,10 +70,10 @@ public class DecisionTree {
     private ArrayList<Boolean> typeSpecification;
 
     // Training Data.
-    private Entries trainData;
+    public Entries trainData;
 
     // Testing Data.
-    private Entries testData;
+    public Entries testData;
 
     // Decision Tree's root node.
     public Node root;
@@ -70,6 +83,9 @@ public class DecisionTree {
 
     // The confusion matrix.
     private Map<Pair<String, String>, Integer> confusionMatrix;
+
+    // Indicates the Random subspace in Random Forest.
+    public int attrSubspaceNum;
 
     /**
      * A utility function to read a CSV as a List of String Arrays, each element is a row.
@@ -114,7 +130,7 @@ public class DecisionTree {
                 newEntry.attributes.add(new CellData(s[i], this.typeSpecification.get(i)));
             }
 
-            // The last colunm is as default the label.
+            // The last column is as default the label.
             newEntry.label = s[i];
 
             if (training) {
@@ -156,7 +172,7 @@ public class DecisionTree {
      * @return  The root node of the DecisionTree.
      */
     private Node ID3(Entries examples, ArrayList<Integer> attributes){
-        Node node = new Node(examples, attributes, this.typeSpecification);
+        Node node = new Node(examples, attributes, this.typeSpecification, this.chosenAttributes, this.inRandomForest, this.attrSubspaceNum);
 
         // If current node is already consistent with examples, return.
         if (node.isConsistent) {
@@ -263,9 +279,9 @@ public class DecisionTree {
                 }
             }
             if (this.attributesName == null) {
-                System.out.print("|Attr" + parent.bestAttribute + relation + parent.decision.value + " : " + node.label + " ");
+                System.out.print("|Attr" + parent.bestAttribute + relation + parent.decision.value + "|Entropy: " + node.entropy + " : " + node.label + " ");
             } else { // If the data CSV has a header.
-                System.out.print("|" + this.attributesName.get(parent.bestAttribute) + relation + parent.decision.value + " : " + node.label + " ");
+                System.out.print("|" + this.attributesName.get(parent.bestAttribute) + relation + parent.decision.value + "|Entropy: " + node.entropy + " : " + node.label + " ");
             }
         }
         Iterator it = node.labelsCount.entrySet().iterator();
@@ -410,11 +426,11 @@ public class DecisionTree {
     /**
      * Funtion to start building the tree.
      */
-    public void startTrain() {
+    public void startTraining() {
         ArrayList<Integer> attributes = new ArrayList<>();
 
         // The attributes index array. To indicate the remaining unsplit attributes.
-        // Initially all attributes are reamined.
+        // Initially all attributes are remained.
         for (int i = 0; i < this.trainData.entries.get(0).attributes.size(); i ++) {
             attributes.add(i);
         }
@@ -427,7 +443,7 @@ public class DecisionTree {
      * Funtion to start testing the test dataset.
      * @return The accuracy.
      */
-    public double startTest() {
+    public double startTesting() {
         this.confusionMatrix = new HashMap<>();
         double correct = 0;
         double all = 0;
@@ -449,5 +465,16 @@ public class DecisionTree {
         double accuracy = correct / all;
         System.out.println("Accuracy: " + accuracy);
         return accuracy;
+    }
+
+
+    /**
+     * For random forest testing purpose.
+     * @param e Entry that random forest wants to get result on.
+     * @return The predicted label of the input entry.
+     */
+    public String startTesting(Entry e) {
+        String predictedLabel = getPrediction(e, this.root);
+        return predictedLabel;
     }
 }
