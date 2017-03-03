@@ -11,7 +11,7 @@ public class Main {
 
         DecisionTree dt = new DecisionTree(typeSpecification, ";", false);
 
-        List<String[]> entries = dt.readCSV("/Users/d_d/Desktop/BigDataSystemsinPractice/Assignments/HW5/smallerData.csv", true);
+        List<String[]> entries = dt.readCSV("smallerData.csv", true);
 
         int trainSize = (int) (entries.size() * 0.8);
 
