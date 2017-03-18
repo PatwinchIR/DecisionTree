@@ -1,6 +1,6 @@
-#Instructions
+# Instructions
 
-###Run your own data
+### Run your own data
 1. Specifying type for each attributes is required.
 2. Specifying selected splitting attributes is required.
 3. Create the instance of a `DecisionTree`
@@ -8,18 +8,18 @@
 5. After loading the data, call `startTraining()` method. This step is required for `startTesting()` method.
 6. (Optional) After step 5, call `startTesting()`.
 
-###Run examples from main
+### Run examples from main
 Run steps:
 1. Load two java files from src;
 2. Run main.java.
 
-Notice:
+# Notice:
 
 1. The dataset "smallerData.csv" now contains both categorical and numerical data.
 
 The output includes a tree diagram and its prediction confusion matrix.
 
-Updates:
+# Updates:
 
 For the categorical feature, it finds the minEntropy feature and corresponding feature value, making an EQUAL and NOT EQUAL branch.
 
