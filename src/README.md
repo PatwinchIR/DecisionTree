@@ -21,7 +21,7 @@ The output includes a tree diagram and its prediction confusion matrix.
 
 # Updates:
 
-For the categorical feature, it finds the `minEntropy` feature and corresponding feature value, making an `EQUAL` and `NOT EQUAL branch`.
+For the categorical feature, it finds the `minEntropy` feature and corresponding feature value, making an `EQUAL` and `NOT EQUAL` branch.
 
 This post explains well about this issue.
 http://stats.stackexchange.com/questions/12187/are-decision-trees-almost-always-binary-trees
