@@ -1,11 +1,11 @@
 # Instructions
 
 ### Run your own data
-1. Specifying type for each attributes is required.
-2. Specifying selected splitting attributes is required.
-3. Create the instance of a `DecisionTree`
-4. Load data supports from file or from `ArrayList<Sting[]>` type data. This step is required for next step.
-5. After loading the data, call `startTraining()` method. This step is required for `startTesting()` method.
+1. Specifying type for each attributes is required;
+2. Specifying selected splitting attributes is required;
+3. Create the instance of a `DecisionTree`;
+4. Load data supports from file or from `ArrayList<Sting[]>` type data. This step is required for next step;
+5. After loading the data, call `startTraining()` method. This step is required for `startTesting()` method;
 6. (Optional) After step 5, call `startTesting()`.
 
 ### Run examples from main
